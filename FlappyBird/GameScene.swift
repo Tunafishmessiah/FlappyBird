@@ -10,8 +10,10 @@ import SpriteKit
 
 enum Category
 {
-    static let bird : UInt32 = 0b1
-    static let pipes : UInt32 = 0b10
+    static let bird : UInt32 = 1 << 0
+    static let pipes : UInt32 = 1 << 1
+    static let goal : UInt32 = 1 << 2
+    static let Floor : UInt32 = 1 << 3
 }
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
@@ -25,6 +27,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var floor2 = SKSpriteNode()
     
     var lblPontos = SKLabelNode()
+    var pontos : Int32 = 0
     var goal1 = SKShapeNode()
     var goal2 = SKShapeNode()
     
@@ -60,6 +63,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         goal1 = CreateGoals(topPipe1, bottom: bottomPipe1)
         goal2 = CreateGoals(topPipe2, bottom: bottomPipe2)
         
+        /*print(Category.bird)
+        print(Category.Floor)
+        print(Category.pipes)
+        print(Category.goal)*/
+        
     }
     
     private func CreateGoals(top : SKSpriteNode, bottom : SKSpriteNode) -> SKShapeNode
@@ -71,6 +79,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let goal = SKShapeNode(rectOfSize: sizeRec)
         goal.fillColor = SKColor.redColor()
         goal.position = CGPoint(x: bottom.position.x,y: y)
+        
+        goal.physicsBody = SKPhysicsBody(rectangleOfSize: sizeRec)
+        goal.physicsBody?.dynamic = false
+        goal.physicsBody?.categoryBitMask = Category.goal
+        goal.physicsBody?.contactTestBitMask = Category.bird
+        goal.physicsBody?.collisionBitMask = 0
+        
         addChild(goal)
         return goal
     }
@@ -102,6 +117,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bird.size.width = bird.size.width/10
         bird.size.height = bird.size.height/8.5
         bird.runAction(repeatAction)
+        
+        
         addChild(bird)
         
     }
@@ -118,12 +135,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         floor1.anchorPoint = CGPointZero
         floor1.position = CGPointZero
         floor1.physicsBody = SKPhysicsBody(edgeLoopFromRect: floor1.frame)
+        floor1.physicsBody?.categoryBitMask = Category.Floor
+        floor1.physicsBody?.collisionBitMask = Category.bird
+        floor1.physicsBody?.contactTestBitMask = Category.bird
         addChild(floor1)
         
         floor2 = SKSpriteNode(imageNamed:"floor")
         floor2.anchorPoint = CGPointZero
         floor2.position = CGPoint(x: floor1.size.width-1, y:0)
         floor2.physicsBody = SKPhysicsBody(edgeLoopFromRect: floor2.frame)
+        floor2.physicsBody?.categoryBitMask = Category.Floor
+        floor2.physicsBody?.collisionBitMask = Category.bird
+        floor2.physicsBody?.contactTestBitMask = Category.bird
         addChild(floor2)
     }
     
@@ -133,6 +156,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             node.physicsBody?.dynamic = false
             node.physicsBody?.categoryBitMask = Category.pipes
             node.physicsBody?.contactTestBitMask = Category.bird
+            node.physicsBody?.collisionBitMask = 0
     }
     
     private func CreatePipes()
@@ -158,12 +182,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         topPipe1.position = CGPoint(x: 1000, y: 700)
         CreatePhysicsPipe(topPipe1)
         
-        
-        var auxSize = CGSize(width: bottomPipe1.size.width, height: topPipe1.position.y - (bottomPipe1.position.y + bottomPipe1.size
-            .height))
-        goal1 = SKShapeNode(rectOfSize: auxSize)
-        goal1.fillColor = SKColor.redColor()
-        
+        //goal1 = CreateGoals(topPipe1, bottom: bottomPipe1)
         
         bottomPipe2 = SKSpriteNode(imageNamed: "bottomPipe")
         bottomPipe2.size = CGSize(width:bottomPipe2.size.width/2 ,height:bottomPipe2.size.height/2)
@@ -175,10 +194,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         topPipe2.position = CGPoint(x: 800, y: 800)
         CreatePhysicsPipe(topPipe2)
         
-        auxSize = CGSize(width: bottomPipe2.size.width, height: topPipe2.position.y - (bottomPipe2.position.y + bottomPipe2.size.height))
-        goal2 = SKShapeNode(rectOfSize: auxSize)
-        goal2.fillColor = SKColor.redColor()
-        
+        //goal2 = CreateGoals(topPipe2, bottom: bottomPipe2)
         
         addChild(bottomPipe1)
         addChild(bottomPipe2)
@@ -198,7 +214,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         else
         {
-            bird.physicsBody?.applyImpulse(CGVectorMake(0,250))
+            bird.physicsBody?.applyImpulse(CGVectorMake(0,150))
         }
         
     }
@@ -219,8 +235,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     private func UpdateFloors()
     {
-        floor1.position = CGPoint(x:floor1.position.x - 4, y:floor1.position.y)
-        floor2.position = CGPoint(x:floor2.position.x - 4	, y: floor2.position.y)
+        floor1.position = CGPoint(x:floor1.position.x - 8, y:floor1.position.y)
+        floor2.position = CGPoint(x:floor2.position.x - 8, y: floor2.position.y)
         
         
         if(floor1.position.x + 30 < (-floor1.size.width/2))
@@ -236,18 +252,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     {
         if(started)
         {
-            topPipe1.position = CGPointMake(topPipe1.position.x - 8, 800)
-            topPipe2.position = CGPointMake(topPipe2.position.x - 8, 700)
-            bottomPipe1.position = CGPointMake(bottomPipe1.position.x - 8, 200)
+            topPipe1.position = CGPointMake(topPipe1.position.x - 8, topPipe1.position.y)
+            topPipe2.position = CGPointMake(topPipe2.position.x - 8, topPipe2.position.y)
+            bottomPipe1.position = CGPointMake(bottomPipe1.position.x - 8, bottomPipe1.position.y)
             bottomPipe2.position = CGPointMake(bottomPipe2.position.x - 8, bottomPipe2.position.y)
             
             goal1.position = CGPointMake(goal1.position.x - 8, goal1.position.y)
             goal2.position = CGPointMake(goal2.position.x - 8, goal2.position.y)
-        
+            
             if(bottomPipe1.position.x < -bottomPipe1.size.width + 320)
             {
+                pipeHeight = random(100,240)
                 bottomPipe1.position = CGPoint(x: bottomPipe2.position.x + bottomPipe2.size.width * 4, y: pipeHeight);
-                topPipe1.position  = CGPoint(x: topPipe2.position.x + topPipe2.size.width * 4,y: pipeHeight);
+                topPipe1.position  = CGPoint(x: topPipe2.position.x + topPipe2.size.width * 4,y: pipeHeight+500);
                 
                 goal1.removeFromParent()
                 goal1 = CreateGoals(topPipe1, bottom: bottomPipe1)
@@ -255,17 +272,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             if(bottomPipe2.position.x < -bottomPipe2.size.width + 320)
             {
+                pipeHeight = random(100,240)
                 bottomPipe2.position = CGPoint(x: bottomPipe1.position.x + bottomPipe1.size.width * 4, y: pipeHeight);
-                topPipe2.position  = CGPoint(x: topPipe1.position.x + topPipe1.size.width * 4,y: pipeHeight);
+                topPipe2.position  = CGPoint(x: topPipe1.position.x + topPipe1.size.width * 4,y: pipeHeight+500);
+                
                 goal2.removeFromParent()
                 goal2 = CreateGoals(topPipe2, bottom: bottomPipe2)
             }
             
-            if(bottomPipe1.position.x < size.width/2)
-            {
-                pipeHeight = random(100,240)
-                print(pipeHeight)
-            }
+            
             
         }
         
@@ -274,9 +289,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private func CreateBirdPhysics()
     {
         bird.physicsBody = SKPhysicsBody(circleOfRadius: bird.size.width/2)
-        bird.physicsBody?.categoryBitMask = Category.bird
-        bird.physicsBody?.contactTestBitMask  = Category.pipes
         bird.physicsBody?.linearDamping = 1.1
+        bird.physicsBody?.restitution = 0
+        bird.physicsBody?.categoryBitMask = Category.bird
+        bird.physicsBody?.contactTestBitMask  = Category.pipes | Category.goal | Category.Floor
+        bird.physicsBody?.collisionBitMask = Category.pipes
+    }
+    
+    func didBeginContact(contact: SKPhysicsContact) {
+        if(((contact.bodyA.categoryBitMask == Category.bird && contact.bodyB.categoryBitMask == Category.goal) || (contact.bodyB.categoryBitMask == Category.bird && contact.bodyA.categoryBitMask == Category.goal)))
+        {
+            self.pontos += 1
+            lblPontos.text = "Pontos: " + String(self.pontos)
+        }
         
+        if(((contact.bodyA.categoryBitMask == Category.bird &&
+            contact.bodyB.categoryBitMask == Category.pipes) ||
+            (contact.bodyB.categoryBitMask == Category.bird &&
+                contact.bodyA.categoryBitMask == Category.pipes)))
+        {
+            //GameOver()
+        }
+        
+        if(((contact.bodyA.categoryBitMask == Category.bird &&
+            contact.bodyB.categoryBitMask == Category.Floor) ||
+            (contact.bodyB.categoryBitMask == Category.bird &&
+                contact.bodyA.categoryBitMask == Category.Floor	)))
+        {
+            //GameOver()
+        }
     }
 }
